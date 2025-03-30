@@ -3,7 +3,7 @@ from langchain import hub
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
-class Str_OutputParser(Str_OutputParser):
+class Str_OutputParser(StrOutputParser):
     def __init__(self) -> None:
         super().__init__()
 
@@ -17,7 +17,7 @@ class Str_OutputParser(Str_OutputParser):
         
         match = re.search(pattern, text_response, re.DOTALL)
         if match:
-            answer_text = match.group(1),strip()
+            answer_text = match.group(1).strip()
             return answer_text
         else:
             return text_response
@@ -33,12 +33,12 @@ class Offline_RAG:
             "context": retriever | self.format_docs,
             "question": RunnablePassthrough()
         }
-        rag_chain = {
+        rag_chain = (
             input_data
             | self.prompt
             | self.llm
             | self.str_parser
-        }
+        )
         return rag_chain
     
 def format_docs(self, docs):
