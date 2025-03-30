@@ -1,6 +1,7 @@
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["USER_AGENT"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +12,7 @@ from src.base.llm_model import get_hf_llm
 from src.rag.main import build_rag_chain, InputQA, OutputQA
 
 llm = get_hf_llm(temperature=0.9)
-genai_docs = "./data_source/generative_ai"
+genai_docs = "./data_source/judgment"
 
 # -------- Chains --------
 
@@ -41,8 +42,8 @@ async def check():
     return {"status": "ok"}
 
 
-@app.post("/generative_ai", response_model=OutputQA)
-async def generative_ai(inputs: InputQA):
+@app.post("/judgment", response_model=OutputQA)
+async def judgment(inputs: InputQA):
     answer = genai_chain.invoke(inputs.question)
     return {"answer": answer}
 
@@ -51,4 +52,4 @@ async def generative_ai(inputs: InputQA):
 add_routes(app,
            genai_chain,
            playground_type="default",
-           path="/generative_ai")
+           path="/judgment")
