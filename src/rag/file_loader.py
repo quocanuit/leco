@@ -7,6 +7,7 @@ import time
 import bs4
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def extract_urls_from_json(json_file):
     with open(json_file, 'r', encoding='utf-8') as f:
@@ -61,7 +62,7 @@ class WebLoader(BaseLoader):
                     future_to_url = {executor.submit(fetch_content_from_url, url): url for url in batch_urls}
                     
                     with tqdm(total=len(batch_urls), desc=f"Fetching batch {i//batch_size+1}", leave=False) as pbar:
-                        for future in concurrent.futures.as_completed(future_to_url):
+                        for future in as_completed(future_to_url):
                             documents = future.result()
                             all_documents.extend(documents)
                             pbar.update(1)
