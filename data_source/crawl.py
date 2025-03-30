@@ -70,7 +70,7 @@ while True:
 
 driver.quit()
 
-filename = f"{START_DATE}_{END_DATE}.json"
+filename = f"{START_DATE.replace('/', '-')}_{END_DATE.replace('/', '-')}.json"
 with open(filename, "w", encoding="utf-8") as f:
     json.dump(file_links, f, ensure_ascii=False, indent=4)
 
