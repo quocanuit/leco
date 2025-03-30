@@ -4,6 +4,7 @@ langchain
 langchain_community
 langchain-cli
 langserve
+langchain-huggingface
 transformers
 bitsandbytes
 fastapi

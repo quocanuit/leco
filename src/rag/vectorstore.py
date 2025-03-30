@@ -1,6 +1,6 @@
 from typing import Union
 from langchain_community.vectorstores import Chroma, FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 
 class VectorDB:
     def __init__(self,

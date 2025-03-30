@@ -14,7 +14,7 @@ def get_hf_llm(model_name: str = 'mistralai/Mistral-7B-Instruct-v0.2',
                max_new_token = 1024,
                **kwargs):
     
-    model = AutoModelForCasualLM.from_pretrained(
+    model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=nf4_config,
         low_cpu_mem_usage=True
