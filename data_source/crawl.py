@@ -5,9 +5,13 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
+from dotenv import dotenv_values
 
-START_DATE = os.environ.get("START_DATE")
-END_DATE = os.environ.get("END_DATE")
+env_name = "period.env"
+config = dotenv_values(env_name)
+
+START_DATE = config["START_DATE"]
+END_DATE = config["END_DATE"]
 
 file_links = []
 page_number = 1
