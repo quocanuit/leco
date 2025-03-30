@@ -1,6 +1,5 @@
 from typing import Union
-from langchain.chroma import Chroma
-from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores import Chroma, FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
 class VectorDB:

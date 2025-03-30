@@ -6,3 +6,4 @@ langchain-cli
 langserve
 transformers
 bitsandbytes
+fastapi
