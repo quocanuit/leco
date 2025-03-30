@@ -1,6 +1,6 @@
 import torch
 from transformers import BitsAndBytesConfig
-from transformers import AutoTokenizer, AutoModelForCasualLM, pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 
 nf4_config = BitsAndBytesConfig(
