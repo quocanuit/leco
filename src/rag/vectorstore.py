@@ -15,7 +15,7 @@ class VectorDB:
 
     def _build_db(self, documents):
         db = self.vector_db.from_documents(documents=documents,
-                                           embeddings=self.embedding)
+                                           embedding=self.embedding)
         return db
 
     def get_retriever(self,

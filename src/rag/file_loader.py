@@ -44,6 +44,7 @@ class BaseLoader:
 class WebLoader(BaseLoader):
     def __init__(self) -> None:
         super().__init__()
+        self.num_workers = 5
 
     def __call__(self, json_files: List[str], **kwargs):
         all_documents = []
@@ -56,11 +57,14 @@ class WebLoader(BaseLoader):
             for i in range(0, len(urls), batch_size):
                 batch_urls = urls[i:i+batch_size]
                 
-                with tqdm(total=len(batch_urls), desc=f"Fetching batch {i//batch_size+1}", leave=False) as pbar:
-                    for url in batch_urls:
-                        documents = fetch_content_from_url(url)
-                        all_documents.extend(documents)
-                        pbar.update(1)
+                with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
+                    future_to_url = {executor.submit(fetch_content_from_url, url): url for url in batch_urls}
+                    
+                    with tqdm(total=len(batch_urls), desc=f"Fetching batch {i//batch_size+1}", leave=False) as pbar:
+                        for future in concurrent.futures.as_completed(future_to_url):
+                            documents = future.result()
+                            all_documents.extend(documents)
+                            pbar.update(1)
                 
                 if i + batch_size < len(urls):
                     time.sleep(3)
