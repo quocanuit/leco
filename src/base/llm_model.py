@@ -2,6 +2,8 @@ import torch
 from transformers import BitsAndBytesConfig
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.llms import HuggingFacePipeline
+from huggingface_hub import login
+import os
 
 nf4_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -13,7 +15,9 @@ nf4_config = BitsAndBytesConfig(
 def get_hf_llm(model_name: str = 'mistralai/Mistral-7B-Instruct-v0.2',
                max_new_token = 1024,
                **kwargs):
-    
+    if "HF_TOKEN" in os.environ:
+        login(token=os.environ["HF_TOKEN"])
+
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=nf4_config,

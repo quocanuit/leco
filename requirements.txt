@@ -8,3 +8,4 @@ langchain-huggingface
 transformers
 bitsandbytes
 fastapi
+huggingface_hub
