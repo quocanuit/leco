@@ -1,5 +1,5 @@
 import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+# os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["USER_AGENT"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
@@ -52,4 +52,5 @@ async def judgment(inputs: InputQA):
 add_routes(app,
            genai_chain,
            playground_type="default",
-           path="/judgment")
+           path="/judgment",
+           enabled_endpoints=["invoke"])
