@@ -17,8 +17,8 @@ def extract_answer(text_response: str,
 class TextSplitter:
     def __init__(self,
                  separators: List[str] = ["\n\n", "\n", " ", ""],
-                 chunk_size: int = 1000,
-                 chunk_overlap: int = 100
+                 chunk_size: int = 1024,
+                 chunk_overlap: int = 128
                  ) -> None:
         
         self.splitter = RecursiveCharacterTextSplitter(
@@ -32,8 +32,8 @@ class TextSplitter:
     
 class LegalDocumentSplitter:
     def __init__(self,
-                 chunk_size: int = 1000,
-                 chunk_overlap: int = 200,
+                 chunk_size: int = 1024,
+                 chunk_overlap: int = 128,
                  section_markers: Optional[List[str]] = None,
                  ):
         
@@ -44,7 +44,6 @@ class LegalDocumentSplitter:
             "NỘI DUNG VỤ ÁN",
             "NHẬN ĐỊNH CỦA TÒA ÁN",
             "QUYẾT ĐỊNH",
-            "Căn cứ:",
             "Tuyên xử:",
         ]
         
