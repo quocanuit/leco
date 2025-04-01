@@ -1,7 +1,8 @@
 import torch
 from transformers import BitsAndBytesConfig
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-from langchain_community.llms import HuggingFacePipeline
+# from langchain_community.llms import HuggingFacePipeline
+from langchain_huggingface import HuggingFacePipeline
 from huggingface_hub import login
 import os
 from dotenv import load_dotenv
