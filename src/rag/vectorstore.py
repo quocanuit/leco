@@ -39,7 +39,7 @@ class VectorDB:
 
     def get_retriever(self,
                       search_type: str = "similarity",
-                      search_kwargs: dict = {'k': 10}
+                      search_kwargs: dict = {'k': 3}
                       ):
         retriever = self.db.as_retriever(search_type=search_type,
                                          search_kwargs=search_kwargs)

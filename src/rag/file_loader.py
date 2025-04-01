@@ -6,8 +6,8 @@ import json
 import time
 import bs4
 from langchain_community.document_loaders import WebBaseLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from src.rag.utils import LegalDocumentSplitter, TextSplitter
 
 def extract_urls_from_json(json_file):
     with open(json_file, 'r', encoding='utf-8') as f:
@@ -72,34 +72,23 @@ class WebLoader(BaseLoader):
         
         return all_documents
     
-class TextSplitter:
-    def __init__(self,
-                 separators: List[str] = ["\n\n", "\n", " ", ""],
-                 chunk_size: int = 1000,
-                 chunk_overlap: int = 100
-                 ) -> None:
-        
-        self.splitter = RecursiveCharacterTextSplitter(
-            separators=separators,
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-        )
-
-    def __call__(self, documents):
-        return self.splitter.split_documents(documents)
-    
 class Loader:
     def __init__(self,
                  file_type: str = "json",
                  split_kwargs: dict = {
-                     "chunk_size": 500,
-                     "chunk_overlap": 50
-                 }) -> None:
+                     "chunk_size": 1000,
+                     "chunk_overlap": 200
+                 },
+                 use_legal_splitter: bool = True) -> None:
         
         assert file_type == "json", "file_type must be json"
         self.file_type = file_type
         self.doc_loader = WebLoader()
-        self.doc_splitter = TextSplitter(**split_kwargs)
+        
+        if use_legal_splitter:
+            self.doc_splitter = LegalDocumentSplitter(**split_kwargs)
+        else:
+            self.doc_splitter = TextSplitter(**split_kwargs)
 
     def load(self, files: Union[str, List[str]], workers: int = 2):
         if isinstance(files, str):
