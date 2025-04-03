@@ -2,17 +2,6 @@ from typing import List, Optional
 import re
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-
-def extract_answer(text_response: str,
-                   pattern: str = r"Answer:\s*(.*)"
-                   ) -> str:
-    
-    match = re.search(pattern, text_response)
-    if match:
-        answer_text = match.group(1).strip()
-        return answer_text
-    else:
-        return "Answer not found."
     
 class TextSplitter:
     def __init__(self,

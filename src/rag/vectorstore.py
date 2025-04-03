@@ -1,7 +1,6 @@
 from langchain_community.vectorstores import Qdrant
 from qdrant_client import QdrantClient
 from langchain_huggingface import HuggingFaceEmbeddings
-# from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 import os
 from dotenv import load_dotenv
 
@@ -23,18 +22,13 @@ class VectorDB:
         self.db = self._build_db(documents)
 
     def _build_db(self, documents):
-        if self.vector_db == Qdrant:
-            db = self.vector_db.from_documents(
+        db = self.vector_db.from_documents(
                 documents=documents,
                 embedding=self.embedding,
                 collection_name=self.collection_name,
                 location=self.location
             )
-        else:
-            db = self.vector_db.from_documents(
-                documents=documents,
-                embedding=self.embedding
-            )
+        
         return db
 
     def get_retriever(self,
