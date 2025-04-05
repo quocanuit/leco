@@ -33,7 +33,6 @@ class LegalDocumentSplitter:
             "NỘI DUNG VỤ ÁN",
             "NHẬN ĐỊNH CỦA TÒA ÁN",
             "QUYẾT ĐỊNH",
-            "Tuyên xử:",
         ]
         
         self.section_pattern = re.compile(r'(' + '|'.join(map(re.escape, self.section_markers)) + r')')
@@ -45,27 +44,35 @@ class LegalDocumentSplitter:
         )
     
     def split_documents(self, documents: List[Document]) -> List[Document]:
-        """Split documents respecting legal section boundaries."""
         final_chunks = []
         
         for doc in documents:
             sections = self._split_by_sections(doc.page_content)
+            document_url = doc.metadata.get("source", "unknown_source")
             
-            for section_name, section_text in sections:
-                metadata = doc.metadata.copy()
-                metadata["section"] = section_name
+            for section_idx, (section_name, section_text) in enumerate(sections):
+                metadata = {
+                    "source": document_url,
+                    "section": section_name
+                }
                 
                 if len(section_text) > self.chunk_size:
-                    section_docs = self.text_splitter.create_documents(
+                    chunks = self.text_splitter.create_documents(
                         [section_text], 
-                        metadatas=[metadata]
+                        metadatas=[metadata.copy() for _ in range(len(section_text)//self.chunk_size + 1)]
                     )
-                    final_chunks.extend(section_docs)
+                    
+                    for chunk_idx, chunk in enumerate(chunks):
+                        chunk.metadata["chunk_index"] = f"{section_idx}.{chunk_idx}"
+                    
+                    final_chunks.extend(chunks)
                 else:
-                    final_chunks.append(Document(
+                    chunk = Document(
                         page_content=section_text,
                         metadata=metadata
-                    ))
+                    )
+                    chunk.metadata["chunk_index"] = f"{section_idx}.0"
+                    final_chunks.append(chunk)
         
         return final_chunks
     
