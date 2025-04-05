@@ -12,9 +12,8 @@ class OutputQA(BaseModel):
     answer: str = Field(..., title="Answer from the model")
 
 
-def build_rag_chain(llm, data_dir, data_type):
-    doc_loaded = Loader(file_type=data_type).load_dir(data_dir, workers=2)
-    retriever = VectorDB(documents = doc_loaded).get_retriever()
+def build_rag_chain(llm, collection_name="judgment_collection"):
+    # Không load dữ liệu, chỉ kết nối đến collection có sẵn
+    retriever = VectorDB(collection_name=collection_name).get_retriever()
     rag_chain = Offline_RAG(llm).get_chain(retriever)
-
     return rag_chain

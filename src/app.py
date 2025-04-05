@@ -16,7 +16,7 @@ genai_docs = "./data_source/judgment"
 
 # -------- Chains --------
 
-genai_chain = build_rag_chain(llm, data_dir=genai_docs, data_type="json")
+genai_chain = build_rag_chain(llm, collection_name="judgment_collection")
 
 # -------- App - FastAPI --------
 
