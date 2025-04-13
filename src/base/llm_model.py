@@ -1,50 +1,21 @@
-import torch
-from transformers import BitsAndBytesConfig
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-# from langchain_community.llms import HuggingFacePipeline
-from langchain_huggingface import HuggingFacePipeline
-from huggingface_hub import login
 import os
 from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
 
-nf4_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_compute_dtype=torch.bfloat16
-)
+def get_gemini_llm(model: str = "gemini-2.0-flash", **kwargs):
 
-def get_hf_llm(model_name: str = 'mistralai/Mistral-7B-Instruct-v0.2',
-               max_new_token = 1024,
-               **kwargs):
-    
-    token = os.getenv("HF_TOKEN")
-    if token:
-        login(token=token)
-    else:
-        print("Warning: HF_TOKEN not found in environment variables")
+    api_key = os.getenv("GEMINI_API_KEY")
 
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        quantization_config=nf4_config,
-        low_cpu_mem_usage=True
-    )
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY not found in .env")
 
-    model_pipeline = pipeline(
-        "text-generation",
+    return ChatGoogleGenerativeAI(
         model=model,
-        tokenizer=tokenizer,
-        max_new_tokens = max_new_token,
-        pad_token_id=tokenizer.eos_token_id,
-        device_map="auto"
+        google_api_key=api_key,
+        temperature=kwargs.get("temperature", 0.7),
+        top_k=kwargs.get("top_k", 40),
+        top_p=kwargs.get("top_p", 0.95),
+        max_output_tokens=kwargs.get("max_output_tokens", 2048)
     )
-
-    llm = HuggingFacePipeline(
-        pipeline=model_pipeline,
-        model_kwargs=kwargs
-    )
-
-    return llm

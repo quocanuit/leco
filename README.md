@@ -1,3 +1,1 @@
-# leco
-
-Legal Consultant
+pip install langchain-google-genai google-generativeai

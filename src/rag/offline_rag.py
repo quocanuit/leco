@@ -1,5 +1,4 @@
 import re
-# from langchain import hub
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
@@ -30,7 +29,7 @@ class Offline_RAG:
         self.prompt = PromptTemplate(
             input_variables=["context", "question"],
             template="""
-Bạn là một trợ lý tư vấn pháp lý, tên của bạn là LECO. Sử dụng ngữ cảnh được cung cấp dưới đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói rằng bạn không biết. Trả lời bằng tiếng Việt và giữ câu trả lời ngắn gọn.
+Bạn là một trợ lý tư vấn pháp lý, tên của bạn là LECO. Sử dụng ngữ cảnh được cung cấp dưới đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói rằng bạn không biết. Trả lời bằng tiếng Việt và giữ câu trả lời ngắn gọn, phải trả lời thật chính xác với mục đích câu hỏi.
 Lưu ý: Nếu ngữ cảnh không liên quan đến câu hỏi, hãy bỏ qua ngữ cảnh và trả lời dựa trên tình huống đó.
 Câu hỏi: {question}
 Ngữ cảnh: {context}
