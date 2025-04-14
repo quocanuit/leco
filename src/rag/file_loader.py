@@ -26,6 +26,11 @@ def fetch_content_from_url(url):
             bs_kwargs=dict(parse_only=bs4.SoupStrainer(id="vanban_content"))
         )
         documents = loader.load()
+        
+        for doc in documents:
+            doc.metadata["source"] = url
+            doc.metadata["doc_id"] = hash(url)
+            
         time.sleep(1)
         return documents
     except Exception as e:
