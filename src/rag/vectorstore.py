@@ -1,4 +1,4 @@
-from langchain_community.vectorstores import Qdrant
+from langchain_qdrant import Qdrant
 from qdrant_client import QdrantClient
 from langchain_huggingface import HuggingFaceEmbeddings
 import os
@@ -24,34 +24,21 @@ class VectorDB:
         self.db = self._build_db(documents)
 
     def _build_db(self, documents):
+        client = self.client if self.client else QdrantClient(url=self.location)
+        
         if documents is None:
-            if self.client:
-                db = self.vector_db(
-                    client=self.client,
-                    collection_name=self.collection_name,
-                    embedding_function=self.embedding
-                )
-            else:
-                db = self.vector_db(
-                    client=QdrantClient(url=self.location),
-                    collection_name=self.collection_name,
-                    embedding_function=self.embedding
-                )
+            db = self.vector_db(
+                client=client,
+                collection_name=self.collection_name,
+                embeddings=self.embedding
+            )
         else:
-            if self.client:
-                db = self.vector_db.from_documents(
-                    documents=documents,
-                    embedding=self.embedding,
-                    collection_name=self.collection_name,
-                    client=self.client
-                )
-            else:
-                db = self.vector_db.from_documents(
-                    documents=documents,
-                    embedding=self.embedding,
-                    collection_name=self.collection_name,
-                    location=self.location
-                )
+            db = self.vector_db.from_documents(
+                documents=documents,
+                embedding=self.embedding,
+                collection_name=self.collection_name,
+                client=client
+            )
         
         return db
 

@@ -4,7 +4,8 @@ from src.rag.vectorstore import VectorDB
 
 def main():
     parser = argparse.ArgumentParser(description='Load and index legal documents')
-    parser.add_argument('--data_dir', required=True, help='Directory containing JSON files')
+    parser.add_argument('--data_dir', default='data_source/judgment', help='Directory containing JSON files')
+    # parser.add_argument('--data_dir', required=True, help='Directory containing JSON files')
     parser.add_argument('--collection', default='judgment_collection', help='Vector DB collection name')
     parser.add_argument('--reset', action='store_true', help='Delete and recreate collection')
     args = parser.parse_args()
@@ -18,7 +19,7 @@ def main():
     vector_db = VectorDB(
         documents=doc_loaded, 
         collection_name=args.collection,
-        reset_collection=args.reset
+        # reset_collection=args.reset
     )
     
     print(f"Successfully indexed {len(doc_loaded)} chunks")
