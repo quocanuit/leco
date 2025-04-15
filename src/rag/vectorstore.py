@@ -5,6 +5,8 @@ import os
 import uuid
 import hashlib
 from dotenv import load_dotenv
+from tqdm import tqdm
+import numpy as np
 
 load_dotenv()
 
@@ -36,21 +38,22 @@ class VectorDB:
         
         self.db = self._build_db(documents)
 
-    def get_document_id(self, doc):
-        if "doc_id" in doc.metadata and doc.metadata["doc_id"]:
-            return doc.metadata["doc_id"]
-            
-        if "source" in doc.metadata and doc.metadata["source"]:
-            source = doc.metadata["source"]
-            content_hash = hashlib.md5(doc.page_content.encode()).hexdigest()[:8]
-            unique_str = f"{source}_{content_hash}"
-        else:
-            unique_str = doc.page_content
-            
-        doc_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, unique_str))
+    def get_document_ids(self, docs):
+        for doc in docs:
+            if "doc_id" in doc.metadata and doc.metadata["doc_id"]:
+                continue
+                
+            if "source" in doc.metadata and doc.metadata["source"]:
+                source = doc.metadata["source"]
+                content_hash = hashlib.md5(doc.page_content.encode()).hexdigest()[:8]
+                unique_str = f"{source}_{content_hash}"
+            else:
+                unique_str = doc.page_content
+                
+            doc_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, unique_str))
+            doc.metadata["doc_id"] = doc_id
         
-        doc.metadata["doc_id"] = doc_id
-        return doc_id
+        return [doc.metadata["doc_id"] for doc in docs]
 
     def _build_db(self, documents):
         if documents is None:
@@ -62,8 +65,7 @@ class VectorDB:
             return db
             
         print("Assigning document IDs...")
-        for doc in documents:
-            self.get_document_id(doc)
+        doc_ids = self.get_document_ids(documents)
             
         collections = self.client.get_collections()
         collection_exists = any(col.name == self.collection_name for col in collections.collections)
@@ -89,34 +91,30 @@ class VectorDB:
         if self.upsert and collection_exists:
             print(f"Upserting documents to existing collection '{self.collection_name}'")
             
-            batch_size = 50
+            batch_size = min(max(20, len(documents) // 20), 200)
             total_processed = 0
             skip_count = 0
             
             for i in range(0, len(documents), batch_size):
                 batch = documents[i:i+batch_size]
+                batch_ids = [doc.metadata["doc_id"] for doc in batch]
+                
                 print(f"Processing batch {i//batch_size + 1}/{(len(documents)-1)//batch_size + 1} with {len(batch)} documents")
                 
-                ids = [doc.metadata["doc_id"] for doc in batch]
+                try:
+                    existing_points = self.client.retrieve(
+                        collection_name=self.collection_name,
+                        ids=batch_ids,
+                        with_payload=False,
+                        with_vectors=False
+                    )
+                    existing_ids = [point.id for point in existing_points]
+                except Exception as e:
+                    print(f"Error retrieving existing points: {e}")
+                    existing_ids = []
                 
-                existing_ids = []
-                for doc_id in ids:
-                    try:
-                        point = self.client.retrieve(
-                            collection_name=self.collection_name,
-                            ids=[doc_id]
-                        )
-                        if point and len(point) > 0:
-                            existing_ids.append(doc_id)
-                    except Exception:
-                        pass
-                
-                new_batch = []
-                for doc in batch:
-                    if doc.metadata["doc_id"] in existing_ids:
-                        skip_count += 1
-                    else:
-                        new_batch.append(doc)
+                new_batch = [doc for doc in batch if doc.metadata["doc_id"] not in existing_ids]
+                skip_count += len(batch) - len(new_batch)
                 
                 if not new_batch:
                     print(f"Skipping batch - all {len(batch)} documents already exist")
@@ -124,27 +122,33 @@ class VectorDB:
                     
                 print(f"Found {len(new_batch)} new documents to insert")
                 
-                texts = [doc.page_content for doc in new_batch]
-                embeddings = self.embedding.embed_documents(texts)
+                embed_batch_size = min(50, len(new_batch))
+                all_points = []
                 
-                points = []
-                for doc, embedding in zip(new_batch, embeddings):
-                    doc_id = doc.metadata["doc_id"]
-                    points.append({
-                        "id": doc_id,
-                        "vector": embedding,
-                        "payload": {
-                            "page_content": doc.page_content,
-                            "metadata": doc.metadata
-                        }
-                    })
+                for j in range(0, len(new_batch), embed_batch_size):
+                    sub_batch = new_batch[j:j+embed_batch_size]
+                    texts = [doc.page_content for doc in sub_batch]
+                    
+                    print(f"Generating embeddings for {len(texts)} documents")
+                    embeddings = self.embedding.embed_documents(texts)
+                    
+                    for doc, embedding in zip(sub_batch, embeddings):
+                        doc_id = doc.metadata["doc_id"]
+                        all_points.append({
+                            "id": doc_id,
+                            "vector": embedding,
+                            "payload": {
+                                "page_content": doc.page_content,
+                                "metadata": doc.metadata
+                            }
+                        })
                 
-                if points:
+                if all_points:
                     self.client.upsert(
                         collection_name=self.collection_name,
-                        points=points
+                        points=all_points
                     )
-                    total_processed += len(points)
+                    total_processed += len(all_points)
             
             print(f"Skipped {skip_count} existing documents")
             print(f"Inserted {total_processed} new documents")
@@ -161,25 +165,33 @@ class VectorDB:
         
         print(f"Adding documents to collection '{self.collection_name}' with IDs")
         
-        texts = [doc.page_content for doc in documents]
-        embeddings = self.embedding.embed_documents(texts)
+        optimal_batch = min(max(50, len(documents) // 10), 200)
         
-        points = []
-        for doc, embedding in zip(documents, embeddings):
-            doc_id = doc.metadata["doc_id"]
-            points.append({
-                "id": doc_id,
-                "vector": embedding,
-                "payload": {
-                    "page_content": doc.page_content,
-                    "metadata": doc.metadata
-                }
-            })
+        for i in range(0, len(documents), optimal_batch):
+            batch = documents[i:i+optimal_batch]
+            print(f"Processing batch {i//optimal_batch + 1}/{(len(documents)-1)//optimal_batch + 1}")
             
-        self.client.upsert(
-            collection_name=self.collection_name,
-            points=points
-        )
+            texts = [doc.page_content for doc in batch]
+            print(f"Generating embeddings for {len(texts)} documents")
+            embeddings = self.embedding.embed_documents(texts)
+            
+            points = []
+            for doc, embedding in zip(batch, embeddings):
+                doc_id = doc.metadata["doc_id"]
+                points.append({
+                    "id": doc_id,
+                    "vector": embedding,
+                    "payload": {
+                        "page_content": doc.page_content,
+                        "metadata": doc.metadata
+                    }
+                })
+                
+            print(f"Upserting {len(points)} points to collection")
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=points
+            )
         
         db = self.vector_db(
             client=self.client,
@@ -190,3 +202,9 @@ class VectorDB:
     
     def search(self, query, k=5):
         return self.db.similarity_search(query, k=k)
+        
+    def get_retriever(self, search_kwargs=None):
+        if search_kwargs is None:
+            search_kwargs = {"k": 5}
+            
+        return self.db.as_retriever(search_kwargs=search_kwargs)
