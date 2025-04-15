@@ -19,25 +19,43 @@ def extract_urls_from_json(json_file):
             urls.append(item['url'])
     return urls
 
-def fetch_content_from_url(url):
-    try:
-        loader = WebBaseLoader(
-            web_paths=[url],
-            bs_kwargs=dict(parse_only=bs4.SoupStrainer(id="vanban_content"))
-        )
-        documents = loader.load()
-        time.sleep(1)
-        return documents
-    except Exception as e:
-        print(f"Error fetching {url}: {e}")
-        return []
+URL_DOCUMENT_CACHE = {}
 
-def get_num_cpu():
-    return multiprocessing.cpu_count()
+def fetch_content_from_url(url, retry_count=2, backoff_factor=1.5):
+    if url in URL_DOCUMENT_CACHE:
+        return URL_DOCUMENT_CACHE[url]
+    
+    for attempt in range(retry_count + 1):
+        try:
+            loader = WebBaseLoader(
+                web_paths=[url],
+                bs_kwargs=dict(parse_only=bs4.SoupStrainer(id="vanban_content"))
+            )
+            documents = loader.load()
+            
+            for doc in documents:
+                doc.metadata["source"] = url
+                doc.metadata["doc_id"] = hash(url)
+            
+            URL_DOCUMENT_CACHE[url] = documents
+            time.sleep(0.5)
+            return documents
+        except Exception as e:
+            if attempt < retry_count:
+                wait_time = backoff_factor * (2 ** attempt)
+                print(f"Error fetching {url}: {e}. Retrying in {wait_time:.1f}s...")
+                time.sleep(wait_time)
+            else:
+                print(f"Failed to fetch {url} after {retry_count+1} attempts: {e}")
+                return []
+
+def get_optimal_workers():
+    cores = multiprocessing.cpu_count()
+    return min(max(8, cores * 2), 32)  # Between 8 and 32 based on cores
 
 class BaseLoader:
     def __init__(self) -> None:
-        self.num_processes = get_num_cpu()
+        self.num_processes = get_optimal_workers()
 
     def __call__(self, files: List[str], **kwargs):
         pass
@@ -45,30 +63,38 @@ class BaseLoader:
 class WebLoader(BaseLoader):
     def __init__(self) -> None:
         super().__init__()
-        self.num_workers = 5
+        self.num_workers = get_optimal_workers()
 
     def __call__(self, json_files: List[str], **kwargs):
+        workers = kwargs.get('workers', self.num_workers)
         all_documents = []
+        all_urls = []
         
-        for json_file in tqdm(json_files, desc="Processing JSON files"):
-            urls = extract_urls_from_json(json_file)
-            
-            batch_size = 10
-            
-            for i in range(0, len(urls), batch_size):
-                batch_urls = urls[i:i+batch_size]
+        print("Extracting URLs from JSON files...")
+        for json_file in json_files:
+            all_urls.extend(extract_urls_from_json(json_file))
+        
+        total_urls = len(all_urls)
+        print(f"Found {total_urls} URLs to process")
+        
+        batch_size = min(max(10, workers * 2), 50)
+        
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            for i in range(0, len(all_urls), batch_size):
+                batch_urls = all_urls[i:i+batch_size]
                 
-                with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
-                    future_to_url = {executor.submit(fetch_content_from_url, url): url for url in batch_urls}
-                    
-                    with tqdm(total=len(batch_urls), desc=f"Fetching batch {i//batch_size+1}", leave=False) as pbar:
-                        for future in as_completed(future_to_url):
-                            documents = future.result()
-                            all_documents.extend(documents)
-                            pbar.update(1)
+                future_to_url = {executor.submit(fetch_content_from_url, url): url for url in batch_urls}
                 
-                if i + batch_size < len(urls):
-                    time.sleep(3)
+                completed = 0
+                with tqdm(total=len(batch_urls), desc=f"Batch {i//batch_size+1}/{(total_urls-1)//batch_size+1}", leave=False) as pbar:
+                    for future in as_completed(future_to_url):
+                        documents = future.result()
+                        all_documents.extend(documents)
+                        completed += 1
+                        pbar.update(1)
+                
+                if i + batch_size < len(all_urls) and completed > 0:
+                    time.sleep(min(1.0, 3.0 / completed))
         
         return all_documents
     
@@ -90,14 +116,21 @@ class Loader:
         else:
             self.doc_splitter = TextSplitter(**split_kwargs)
 
-    def load(self, files: Union[str, List[str]], workers: int = 2):
+    def load(self, files: Union[str, List[str]], workers: int = None):
         if isinstance(files, str):
             files = [files]
+            
+        workers = workers or get_optimal_workers()
+        print(f"Loading documents using {workers} workers...")
+        
         doc_loaded = self.doc_loader(files, workers=workers)
+        
+        print(f"Splitting {len(doc_loaded)} documents...")
         doc_split = self.doc_splitter(doc_loaded)
+        
         return doc_split
 
-    def load_dir(self, dir_path: str, workers: int = 2):
+    def load_dir(self, dir_path: str, workers: int = None):
         files = glob.glob(f"{dir_path}/*.json")
         assert len(files) > 0, f"No JSON files found in {dir_path}"
         return self.load(files, workers=workers)
