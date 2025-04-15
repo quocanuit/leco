@@ -1,12 +1,10 @@
-from langchain_qdrant import Qdrant, QdrantVectorStore
+from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient, models
 from langchain_huggingface import HuggingFaceEmbeddings
 import os
 import uuid
 import hashlib
 from dotenv import load_dotenv
-from tqdm import tqdm
-import numpy as np
 
 load_dotenv()
 

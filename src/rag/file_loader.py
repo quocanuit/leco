@@ -5,7 +5,6 @@ import multiprocessing
 import json
 import time
 import bs4
-import os
 from langchain_community.document_loaders import WebBaseLoader
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.rag.utils import LegalDocumentSplitter, TextSplitter
