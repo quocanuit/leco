@@ -1,6 +1,5 @@
 import argparse
 import time
-import multiprocessing
 from src.rag.file_loader import Loader, get_optimal_workers
 from src.rag.vectorstore import VectorDB
 
@@ -46,7 +45,6 @@ def main():
     index_time = time.time()
     print(f"Successfully indexed {len(doc_loaded)} chunks in {index_time - load_time:.2f} seconds")
     print(f"Total processing time: {index_time - start_time:.2f} seconds")
-    print("To avoid duplicates in the future, always use the --upsert flag")
 
 if __name__ == "__main__":
     main()
