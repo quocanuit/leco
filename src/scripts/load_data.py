@@ -1,11 +1,13 @@
 import argparse
 import time
+import os
+import glob
 from src.rag.file_loader import Loader, get_optimal_workers
 from src.rag.vectorstore import VectorDB
 
 def main():
     parser = argparse.ArgumentParser(description='Load and index legal documents')
-    parser.add_argument('--data_dir', default='data_source/judgment', help='Directory containing JSON files')
+    parser.add_argument('--data_dir', default='data_source/judgment', help='Directory containing JSON and/or PDF files')
     parser.add_argument('--collection', default='judgment_collection', help='Vector DB collection name')
     parser.add_argument('--reset', action='store_true', help='WARNING: Delete and recreate collection')
     parser.add_argument('--upsert', action='store_true', help='Update existing documents instead of duplicating')
@@ -19,8 +21,13 @@ def main():
     start_time = time.time()
     print(f"Loading documents from {args.data_dir} with {workers} workers...")
     
+    pdf_files = glob.glob(f"{args.data_dir}/*.pdf")
+    if pdf_files:
+        print(f"Found {len(pdf_files)} PDF files to process:")
+        for pdf in pdf_files:
+            print(f"  - {os.path.basename(pdf)}")
+    
     loader = Loader(
-        file_type="json", 
         split_kwargs={
             "chunk_size": args.chunk_size,
             "chunk_overlap": args.chunk_overlap
@@ -31,6 +38,16 @@ def main():
     
     load_time = time.time()
     print(f"Loaded {len(doc_loaded)} document chunks in {load_time - start_time:.2f} seconds")
+    
+    pdf_chunks = [doc for doc in doc_loaded if doc.metadata.get("source", "").lower().endswith('.pdf')]
+    if pdf_chunks:
+        print(f"Successfully loaded {len(pdf_chunks)} PDF document chunks")
+        if len(pdf_chunks) > 0:
+            sample = pdf_chunks[0]
+            print("\nSample PDF chunk metadata:")
+            for key, value in sample.metadata.items():
+                print(f"  {key}: {value}")
+            print(f"  Content preview: {sample.page_content[:100]}...\n")
     
     print(f"Indexing documents into collection '{args.collection}'...")
     print(f"Mode: {'RESET & CREATE NEW' if args.reset else ('UPSERT' if args.upsert else 'ADD NEW ONLY')}")
