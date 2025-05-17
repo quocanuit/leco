@@ -6,7 +6,7 @@ init:
 
 index:
 	@echo "Running data loader..."
-	python3 src/scripts/load_data.py --reset
+	python3 src/scripts/load_data.py --upsert
 
 up:
 	@echo "Starting server..."
