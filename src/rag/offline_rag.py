@@ -13,14 +13,16 @@ class Str_OutputParser(StrOutputParser):
     
     def extract_answer(self,
                        text_response: str,
-                       pattern: str = r"Tư vấn của bạn:\s*(.*)"
+                       pattern: str = r"Trả lời:\s*(.*)"
                        ) -> str:
+        
         match = re.search(pattern, text_response, re.DOTALL)
         if match:
-            return match.group(1).strip()
+            answer_text = match.group(1).strip()
+            return answer_text
         else:
             return text_response
-
+        
 class Offline_RAG:
     def __init__(self, llm) -> None:
         self.llm = llm
@@ -42,10 +44,10 @@ class Offline_RAG:
             | self.str_parser
         )
         return rag_chain
-
+    
     def format_docs(self, docs):
         return "\n\n".join(doc.page_content for doc in docs)
-
+    
     def load_prompt_template(self, filename):
         path = os.path.join(os.path.dirname(__file__), filename)
         with open(path, "r", encoding="utf-8") as f:
