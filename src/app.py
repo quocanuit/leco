@@ -7,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from langserve import add_routes
 
-from src.base.llm_model import get_hf_llm
+from src.base.llm_model import get_gemini_llm
 from src.rag.main import build_rag_chain, InputQA, OutputQA
 
-llm = get_hf_llm(temperature=0.9)
+llm = get_gemini_llm(model="gemini-2.0-flash")
 genai_docs = "./data_source/judgment"
 
 # -------- Chains --------
