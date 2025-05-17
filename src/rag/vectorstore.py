@@ -1,6 +1,6 @@
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient, models
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import os
 import uuid
 import hashlib
@@ -12,7 +12,7 @@ class VectorDB:
     def __init__(self,
                 documents=None,
                 vector_db=QdrantVectorStore,
-                embedding=HuggingFaceEmbeddings(model_name="BAAI/bge-m3"),
+                embedding=None,
                 collection_name="judgment_collection",
                 location=os.getenv("VECTOR_DB_URL"),
                 client=None,
@@ -20,8 +20,12 @@ class VectorDB:
                 upsert=True
             ) -> None:
 
+        self.embedding = embedding or GoogleGenerativeAIEmbeddings(
+            model="models/embedding-001",
+            google_api_key=os.getenv("GEMINI_API_KEY")
+        )
+
         self.vector_db = vector_db
-        self.embedding = embedding
         self.collection_name = collection_name
         self.location = location
         self.client = client if client else QdrantClient(url=location)

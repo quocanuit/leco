@@ -3,8 +3,6 @@
 init:
 	@echo "Initializing environment..."
 	@bash setup.sh
-	@echo "Note: Environment variables might not be available in this shell session."
-	@echo "To ensure environment variables are set, run 'source setup.sh' directly."
 
 index:
 	@echo "Running data loader..."

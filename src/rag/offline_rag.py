@@ -1,8 +1,8 @@
 import re
-# from langchain import hub
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
+import os
 
 class Str_OutputParser(StrOutputParser):
     def __init__(self) -> None:
@@ -26,16 +26,9 @@ class Str_OutputParser(StrOutputParser):
 class Offline_RAG:
     def __init__(self, llm) -> None:
         self.llm = llm
-        # self.prompt = hub.pull("rlm/rag-prompt")
         self.prompt = PromptTemplate(
             input_variables=["context", "question"],
-            template="""
-Bạn là một trợ lý tư vấn pháp lý, tên của bạn là LECO. Sử dụng ngữ cảnh được cung cấp dưới đây để trả lời câu hỏi. Nếu bạn không biết câu trả lời, hãy nói rằng bạn không biết. Trả lời bằng tiếng Việt và giữ câu trả lời ngắn gọn.
-Lưu ý: Nếu ngữ cảnh không liên quan đến câu hỏi, hãy bỏ qua ngữ cảnh và trả lời dựa trên tình huống đó.
-Câu hỏi: {question}
-Ngữ cảnh: {context}
-Trả lời:
-"""
+            template=self.load_prompt_template("prompt.txt")
         )
         self.str_parser = Str_OutputParser()
 
@@ -54,3 +47,8 @@ Trả lời:
     
     def format_docs(self, docs):
         return "\n\n".join(doc.page_content for doc in docs)
+    
+    def load_prompt_template(self, filename):
+        path = os.path.join(os.path.dirname(__file__), filename)
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
