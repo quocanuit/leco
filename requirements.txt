@@ -1,24 +1,13 @@
-# selenium
-# python-dotenv
-# langchain
-# langchain_community
-# langchain-cli
-# langserve
-# langchain-huggingface
-# transformers
-# bitsandbytes
-# fastapi
-# huggingface_hub
-# beautifulsoup4
-# accelerate
-# qdrant-client
-
 python-dotenv
+fastapi
+selenium
+beautifulsoup4
+accelerate
 langchain
 langchain_community
+langchain-cli
+langchain-google-genai
+langchain_qdrant
 langserve
-fastapi
-beautifulsoup4
 qdrant-client
 google-generativeai
-langchain-google-genai
