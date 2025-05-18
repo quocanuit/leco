@@ -2,7 +2,6 @@ python-dotenv
 fastapi
 selenium
 beautifulsoup4
-accelerate
 langchain
 langchain_community
 langchain-cli
