@@ -43,8 +43,15 @@ async def check():
 
 @app.post("/judgment", response_model=OutputQA)
 async def judgment(inputs: InputQA):
-    answer = genai_chain.invoke(inputs.question)
-    return {"answer": answer}
+    answer = genai_chain.invoke({"question": inputs.question, "debug": inputs.debug})
+    
+    debug_info = None
+    if inputs.debug:
+        from src.rag.main import offline_rag_instance
+        if offline_rag_instance and hasattr(offline_rag_instance, "str_parser"):
+            debug_info = offline_rag_instance.str_parser.get_debug_info()
+    
+    return {"answer": answer, "debug_info": debug_info}
 
 
 # -------- Langserve Routes - Playground --------

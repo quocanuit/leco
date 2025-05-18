@@ -7,6 +7,7 @@ import os
 class Str_OutputParser(StrOutputParser):
     def __init__(self) -> None:
         super().__init__()
+        self._debug_info = {}
 
     def parse(self, text: str) -> str:
         return self.extract_answer(text)
@@ -22,6 +23,12 @@ class Str_OutputParser(StrOutputParser):
             return answer_text
         else:
             return text_response
+            
+    def get_debug_info(self):
+        return self._debug_info
+        
+    def set_debug_info(self, key, value):
+        self._debug_info[key] = value
         
 class Offline_RAG:
     def __init__(self, llm) -> None:
@@ -33,13 +40,35 @@ class Offline_RAG:
         self.str_parser = Str_OutputParser()
 
     def get_chain(self, retriever):
-        input_data = {
-            "context": retriever | self.format_docs,
-            "question": RunnablePassthrough()
-        }
+        retriever_chain = retriever | self.format_docs
+        
+        def combine_inputs(input_data):
+            if isinstance(input_data, dict) and "question" in input_data:
+                question = input_data["question"]
+                debug_mode = input_data.get("debug", False)
+            else:
+                question = input_data
+                debug_mode = False
+            
+            doc_content = retriever_chain.invoke(question)
+            return {"context": doc_content, "question": question, "debug": debug_mode}
+        
+        def process_prompt(inputs):
+            formatted_prompt = self.prompt.format(
+                context=inputs["context"], 
+                question=inputs["question"]
+            )
+            
+            if inputs.get("debug", False):
+                self.str_parser.set_debug_info("prompt", formatted_prompt)
+                self.str_parser.set_debug_info("context", inputs["context"])
+                
+            return formatted_prompt
+        
         rag_chain = (
-            input_data
-            | self.prompt
+            RunnablePassthrough()
+            | combine_inputs
+            | process_prompt
             | self.llm
             | self.str_parser
         )
