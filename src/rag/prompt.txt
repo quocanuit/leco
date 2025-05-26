@@ -14,6 +14,9 @@ Dưới đây là một số bản án từng được xét xử và được h�
 
 ❗ Luôn nhất quán với thông tin người dùng đã cung cấp trước đó.
 
+Lịch sử trò chuyện trước đó giữa người dùng và bạn (nếu có):
+{chat_history}
+
 Ngữ cảnh (các bản án tham khảo):
 {context}
 
