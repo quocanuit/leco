@@ -10,3 +10,5 @@ langchain_qdrant
 langserve
 qdrant-client
 google-generativeai
+pypdf
+pdfminer.six

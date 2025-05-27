@@ -43,6 +43,8 @@ class VectorDB:
     def get_document_ids(self, docs):
         for doc in docs:
             if "doc_id" in doc.metadata and doc.metadata["doc_id"]:
+                if isinstance(doc.metadata["doc_id"], int):
+                    doc.metadata["doc_id"] = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"hash_{doc.metadata['doc_id']}"))
                 continue
                 
             if "source" in doc.metadata and doc.metadata["source"]:
@@ -180,14 +182,27 @@ class VectorDB:
             points = []
             for doc, embedding in zip(batch, embeddings):
                 doc_id = doc.metadata["doc_id"]
-                points.append({
-                    "id": doc_id,
-                    "vector": embedding,
-                    "payload": {
-                        "page_content": doc.page_content,
-                        "metadata": doc.metadata
-                    }
-                })
+                try:
+                    uuid.UUID(doc_id)
+                    points.append({
+                        "id": doc_id,
+                        "vector": embedding,
+                        "payload": {
+                            "page_content": doc.page_content,
+                            "metadata": doc.metadata
+                        }
+                    })
+                except ValueError:
+                    valid_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
+                    print(f"Converting ID {doc_id} to valid UUID: {valid_id}")
+                    points.append({
+                        "id": valid_id,
+                        "vector": embedding,
+                        "payload": {
+                            "page_content": doc.page_content,
+                            "metadata": {**doc.metadata, "doc_id": valid_id}
+                        }
+                    })
                 
             print(f"Upserting {len(points)} points to collection")
             self.client.upsert(
