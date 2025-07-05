@@ -14,7 +14,7 @@ def get_gemini_llm(model: str = "gemini-2.0-flash", **kwargs):
     return ChatGoogleGenerativeAI(
         model=model,
         google_api_key=api_key,
-        temperature=kwargs.get("temperature", 0.7),
+        temperature=kwargs.get("temperature", 0.5),
         top_k=kwargs.get("top_k", 40),
         top_p=kwargs.get("top_p", 0.95),
         max_output_tokens=kwargs.get("max_output_tokens", 2048)

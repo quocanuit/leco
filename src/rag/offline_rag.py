@@ -98,8 +98,13 @@ class Offline_RAG:
         
         try:
             parts = chunk_index.split('.')
-            if len(parts) >= 3 and parts[0] == 'L':
-                return (int(parts[1]), int(parts[2]))
+            if len(parts) >= 3:
+                # Handle both L.{article}.{chunk} and J.{section}.{chunk} formats
+                if parts[0] in ['L', 'J']:
+                    return (int(parts[1]), int(parts[2]))
+            elif len(parts) >= 2:
+                # Handle {section}.{chunk} format
+                return (int(parts[0]), int(parts[1]))
             return (float('inf'), float('inf'))
         except (ValueError, IndexError):
             return (float('inf'), float('inf'))
