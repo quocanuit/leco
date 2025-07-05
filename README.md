@@ -32,16 +32,12 @@ LECO is an AI chatbot providing legal consultations, using a RAG system based on
    ```bash
    make index
    ```
+   
+   This will automatically create separate collections:
+   - `judgment_collection` for court judgments (JSON files)
+   - `law_collection` for legal documents (PDF files)
 
 4. **Start the server**:
    ```bash
    make up
    ```
-
-## Evaluation
-
-```bash
-cd eval
-python simple_eval.py              # Quick evaluation
-python ragas_simple.py             # RAGAS evaluation
-```

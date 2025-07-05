@@ -98,6 +98,7 @@ class WebLoader(BaseLoader):
                 if i + batch_size < len(all_urls) and completed > 0:
                     time.sleep(min(1.0, 3.0 / completed))
         
+        print(f"Total documents loaded from URLs: {len(all_documents)}")
         return all_documents
 
 class PDFLoader(BaseLoader):
@@ -150,7 +151,6 @@ class PDFLoader(BaseLoader):
                 try:
                     documents = method(pdf_file)
                     if documents:
-                        print(f"Successfully loaded PDF using {method.__name__}")
                         break
                 except Exception as e:
                     print(f"Failed with {method.__name__}: {str(e)}")
@@ -165,8 +165,6 @@ class PDFLoader(BaseLoader):
                 
                 if isinstance(doc.metadata["doc_id"], int) and doc.metadata["doc_id"] < 0:
                     doc.metadata["doc_id"] = abs(doc.metadata["doc_id"])
-                
-                print(f"PDF document ID: {doc.metadata['doc_id']} (type: {type(doc.metadata['doc_id']).__name__})")
                 
                 if "page" not in doc.metadata:
                     doc.metadata["page"] = 0
@@ -267,10 +265,18 @@ class Loader:
         split_documents = []
         if json_docs:
             print(f"Splitting {len(json_docs)} judgment documents...")
-            split_documents.extend(self.doc_splitters["json"](json_docs))
+            split_json_docs = self.doc_splitters["json"](json_docs)
+            # Ensure file_type is preserved after splitting
+            for doc in split_json_docs:
+                doc.metadata["file_type"] = "json"
+            split_documents.extend(split_json_docs)
         if pdf_docs:
             print(f"Splitting {len(pdf_docs)} law documents...")
-            split_documents.extend(self.doc_splitters["pdf"](pdf_docs))
+            split_pdf_docs = self.doc_splitters["pdf"](pdf_docs)
+            # Ensure file_type is preserved after splitting
+            for doc in split_pdf_docs:
+                doc.metadata["file_type"] = "pdf"
+            split_documents.extend(split_pdf_docs)
         print(f"Total document chunks after splitting: {len(split_documents)}")
         return split_documents
 

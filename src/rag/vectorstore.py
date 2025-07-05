@@ -34,9 +34,8 @@ class VectorDB:
         if reset_collection:
             try:
                 self.client.delete_collection(collection_name)
-                print(f"Collection {collection_name} deleted")
             except Exception as e:
-                print(f"Error deleting collection: {e}")
+                pass
         
         self.db = self._build_db(documents)
 
@@ -68,7 +67,6 @@ class VectorDB:
             )
             return db
             
-        print("Assigning document IDs...")
         doc_ids = self.get_document_ids(documents)
             
         collections = self.client.get_collections()
@@ -77,10 +75,8 @@ class VectorDB:
         count = 0
         if collection_exists:
             count = self.client.count(collection_name=self.collection_name).count
-            print(f"Collection '{self.collection_name}' exists with {count} points")
         
         if not collection_exists:
-            print(f"Creating new collection '{self.collection_name}'")
             sample_embedding = self.embedding.embed_query("Sample text")
             vector_size = len(sample_embedding)
             
@@ -93,8 +89,6 @@ class VectorDB:
             )
             
         if self.upsert and collection_exists:
-            print(f"Upserting documents to existing collection '{self.collection_name}'")
-            
             batch_size = min(max(20, len(documents) // 20), 200)
             total_processed = 0
             skip_count = 0
@@ -102,8 +96,6 @@ class VectorDB:
             for i in range(0, len(documents), batch_size):
                 batch = documents[i:i+batch_size]
                 batch_ids = [doc.metadata["doc_id"] for doc in batch]
-                
-                print(f"Processing batch {i//batch_size + 1}/{(len(documents)-1)//batch_size + 1} with {len(batch)} documents")
                 
                 try:
                     existing_points = self.client.retrieve(
@@ -114,18 +106,14 @@ class VectorDB:
                     )
                     existing_ids = [point.id for point in existing_points]
                 except Exception as e:
-                    print(f"Error retrieving existing points: {e}")
                     existing_ids = []
                 
                 new_batch = [doc for doc in batch if doc.metadata["doc_id"] not in existing_ids]
                 skip_count += len(batch) - len(new_batch)
                 
                 if not new_batch:
-                    print(f"Skipping batch - all {len(batch)} documents already exist")
                     continue
                     
-                print(f"Found {len(new_batch)} new documents to insert")
-                
                 embed_batch_size = min(50, len(new_batch))
                 all_points = []
                 
@@ -133,7 +121,6 @@ class VectorDB:
                     sub_batch = new_batch[j:j+embed_batch_size]
                     texts = [doc.page_content for doc in sub_batch]
                     
-                    print(f"Generating embeddings for {len(texts)} documents")
                     embeddings = self.embedding.embed_documents(texts)
                     
                     for doc, embedding in zip(sub_batch, embeddings):
