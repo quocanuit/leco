@@ -12,3 +12,5 @@ qdrant-client
 google-generativeai
 pypdf
 pdfminer.six
+ragas
+datasets

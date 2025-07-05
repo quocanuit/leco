@@ -30,13 +30,14 @@ class VectorDB:
         self.location = location
         self.client = client if client else QdrantClient(url=location)
         self.upsert = upsert
+        self.reset_collection = reset_collection
         
         if reset_collection:
             try:
                 self.client.delete_collection(collection_name)
-                print(f"Collection {collection_name} deleted")
+                print(f"Deleted existing collection: {collection_name}")
             except Exception as e:
-                print(f"Error deleting collection: {e}")
+                print(f"Collection {collection_name} didn't exist or couldn't be deleted: {e}")
         
         self.db = self._build_db(documents)
 
@@ -68,7 +69,6 @@ class VectorDB:
             )
             return db
             
-        print("Assigning document IDs...")
         doc_ids = self.get_document_ids(documents)
             
         collections = self.client.get_collections()
@@ -77,10 +77,9 @@ class VectorDB:
         count = 0
         if collection_exists:
             count = self.client.count(collection_name=self.collection_name).count
-            print(f"Collection '{self.collection_name}' exists with {count} points")
         
+        # Create collection if it doesn't exist
         if not collection_exists:
-            print(f"Creating new collection '{self.collection_name}'")
             sample_embedding = self.embedding.embed_query("Sample text")
             vector_size = len(sample_embedding)
             
@@ -91,84 +90,33 @@ class VectorDB:
                     distance=models.Distance.COSINE
                 )
             )
+            print(f"Created new collection '{self.collection_name}'")
             
-        if self.upsert and collection_exists:
-            print(f"Upserting documents to existing collection '{self.collection_name}'")
+        # RESET MODE: Add all documents (collection was deleted and recreated)
+        if self.reset_collection:
+            print(f"RESET MODE: Adding all {len(documents)} documents to collection '{self.collection_name}'")
+            self._add_all_documents(documents)
             
-            batch_size = min(max(20, len(documents) // 20), 200)
-            total_processed = 0
-            skip_count = 0
+        # UPSERT MODE: Only add new documents  
+        elif self.upsert and collection_exists:
+            print(f"UPSERT MODE: Checking {len(documents)} documents for new ones in collection '{self.collection_name}'")
+            self._upsert_new_documents(documents, count)
             
-            for i in range(0, len(documents), batch_size):
-                batch = documents[i:i+batch_size]
-                batch_ids = [doc.metadata["doc_id"] for doc in batch]
-                
-                print(f"Processing batch {i//batch_size + 1}/{(len(documents)-1)//batch_size + 1} with {len(batch)} documents")
-                
-                try:
-                    existing_points = self.client.retrieve(
-                        collection_name=self.collection_name,
-                        ids=batch_ids,
-                        with_payload=False,
-                        with_vectors=False
-                    )
-                    existing_ids = [point.id for point in existing_points]
-                except Exception as e:
-                    print(f"Error retrieving existing points: {e}")
-                    existing_ids = []
-                
-                new_batch = [doc for doc in batch if doc.metadata["doc_id"] not in existing_ids]
-                skip_count += len(batch) - len(new_batch)
-                
-                if not new_batch:
-                    print(f"Skipping batch - all {len(batch)} documents already exist")
-                    continue
-                    
-                print(f"Found {len(new_batch)} new documents to insert")
-                
-                embed_batch_size = min(50, len(new_batch))
-                all_points = []
-                
-                for j in range(0, len(new_batch), embed_batch_size):
-                    sub_batch = new_batch[j:j+embed_batch_size]
-                    texts = [doc.page_content for doc in sub_batch]
-                    
-                    print(f"Generating embeddings for {len(texts)} documents")
-                    embeddings = self.embedding.embed_documents(texts)
-                    
-                    for doc, embedding in zip(sub_batch, embeddings):
-                        doc_id = doc.metadata["doc_id"]
-                        all_points.append({
-                            "id": doc_id,
-                            "vector": embedding,
-                            "payload": {
-                                "page_content": doc.page_content,
-                                "metadata": doc.metadata
-                            }
-                        })
-                
-                if all_points:
-                    self.client.upsert(
-                        collection_name=self.collection_name,
-                        points=all_points
-                    )
-                    total_processed += len(all_points)
+        # DEFAULT MODE: Add all documents (new collection or no upsert)
+        else:
+            print(f"DEFAULT MODE: Adding all {len(documents)} documents to collection '{self.collection_name}'")
+            self._add_all_documents(documents)
             
-            print(f"Skipped {skip_count} existing documents")
-            print(f"Inserted {total_processed} new documents")
-            
-            new_count = self.client.count(collection_name=self.collection_name).count
-            print(f"Collection now has {new_count} points (was {count})")
-            
-            db = self.vector_db(
-                client=self.client,
-                collection_name=self.collection_name,
-                embedding=self.embedding
-            )
-            return db
-        
-        print(f"Adding documents to collection '{self.collection_name}' with IDs")
-        
+        # Return the database interface
+        db = self.vector_db(
+            client=self.client,
+            collection_name=self.collection_name,
+            embedding=self.embedding
+        )
+        return db
+    
+    def _add_all_documents(self, documents):
+        """Add all documents without checking for existing ones"""
         optimal_batch = min(max(50, len(documents) // 10), 200)
         
         for i in range(0, len(documents), optimal_batch):
@@ -176,7 +124,6 @@ class VectorDB:
             print(f"Processing batch {i//optimal_batch + 1}/{(len(documents)-1)//optimal_batch + 1}")
             
             texts = [doc.page_content for doc in batch]
-            print(f"Generating embeddings for {len(texts)} documents")
             embeddings = self.embedding.embed_documents(texts)
             
             points = []
@@ -203,19 +150,78 @@ class VectorDB:
                             "metadata": {**doc.metadata, "doc_id": valid_id}
                         }
                     })
-                
-            print(f"Upserting {len(points)} points to collection")
+                    
+                print(f"Upserting {len(points)} points to collection")
             self.client.upsert(
                 collection_name=self.collection_name,
                 points=points
             )
+    
+    def _upsert_new_documents(self, documents, original_count):
+        """Only add documents that don't already exist"""
+        batch_size = min(max(20, len(documents) // 20), 200)
+        total_processed = 0
+        skip_count = 0
         
-        db = self.vector_db(
-            client=self.client,
-            collection_name=self.collection_name,
-            embedding=self.embedding
-        )
-        return db
+        for i in range(0, len(documents), batch_size):
+            batch = documents[i:i+batch_size]
+            batch_ids = [doc.metadata["doc_id"] for doc in batch]
+            
+            print(f"Checking batch {i//batch_size + 1}: {len(batch)} documents")
+            
+            try:
+                existing_points = self.client.retrieve(
+                    collection_name=self.collection_name,
+                    ids=batch_ids,
+                    with_payload=False,
+                    with_vectors=False
+                )
+                existing_ids = [point.id for point in existing_points]
+                print(f"Found {len(existing_ids)} existing documents in this batch")
+            except Exception as e:
+                print(f"Error checking existing documents: {e}")
+                existing_ids = []
+            
+            new_batch = [doc for doc in batch if doc.metadata["doc_id"] not in existing_ids]
+            skip_count += len(batch) - len(new_batch)
+            
+            if not new_batch:
+                print(f"No new documents in this batch, skipping")
+                continue
+                
+            print(f"Adding {len(new_batch)} new documents from this batch")
+            embed_batch_size = min(50, len(new_batch))
+            all_points = []
+            
+            for j in range(0, len(new_batch), embed_batch_size):
+                sub_batch = new_batch[j:j+embed_batch_size]
+                texts = [doc.page_content for doc in sub_batch]
+                
+                embeddings = self.embedding.embed_documents(texts)
+                
+                for doc, embedding in zip(sub_batch, embeddings):
+                    doc_id = doc.metadata["doc_id"]
+                    all_points.append({
+                        "id": doc_id,
+                        "vector": embedding,
+                        "payload": {
+                            "page_content": doc.page_content,
+                            "metadata": doc.metadata
+                        }
+                    })
+            
+            if all_points:
+                self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=all_points
+                )
+                total_processed += len(all_points)
+        
+        print(f"Skipped {skip_count} existing documents")
+        print(f"Inserted {total_processed} new documents")
+        
+        new_count = self.client.count(collection_name=self.collection_name).count
+        print(f"Collection now has {new_count} points (was {original_count})")
     
     def search(self, query, k=5):
         return self.db.similarity_search(query, k=k)
