@@ -37,3 +37,11 @@ LECO is an AI chatbot providing legal consultations, using a RAG system based on
    ```bash
    make up
    ```
+
+## Evaluation
+
+```bash
+cd eval
+python simple_eval.py              # Quick evaluation
+python ragas_simple.py             # RAGAS evaluation
+```
