@@ -1,0 +1,14 @@
+{
+  "judgment": {
+    "answer_relevancy": 0.6479181992101989,
+    "faithfulness": 0.6722222222222223,
+    "context_precision": 0.7111111110712962,
+    "context_recall": 0.8
+  },
+  "law": {
+    "answer_relevancy": 0.7403980346977516,
+    "faithfulness": 0.6851851851851851,
+    "context_precision": 0.805555555498611,
+    "context_recall": 0.7619047619047619
+  }
+}
