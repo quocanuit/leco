@@ -119,7 +119,7 @@ def run_ragas_evaluation(custom_questions=None):
         
         # Calculate scores
         scores = {}
-        avg_answer_relevancy = sum(result['answer_relevancy']) / len(result['answer_relevancy'])+0.1
+        avg_answer_relevancy = sum(result['answer_relevancy']) / len(result['answer_relevancy'])
         avg_faithfulness = sum(result['faithfulness']) / len(result['faithfulness'])
         avg_context_precision = sum(result['context_precision']) / len(result['context_precision'])
         avg_context_recall = sum(result['context_recall']) / len(result['context_recall'])

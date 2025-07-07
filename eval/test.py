@@ -14,9 +14,8 @@ from src.rag.offline_rag import Offline_RAG
 def debug_rag_process():
     """Debug complete RAG process"""
     
-    # Test configuration
-    test_question = "Điều 52"
-    source_type = "law"
+    test_question = "Tôi muốn đơn phương ly hôn chồng"
+    source_type = "judgment"
     
     print("=" * 60)
     print("LECO DEBUG TEST")
@@ -78,13 +77,11 @@ def debug_rag_process():
     # 5. Load prompt template
     print(f"\n5. Loading prompt template...")
     try:
-        # Update path to go up one level since we're now in eval/
         prompt_path = os.path.join("..", "src", "rag", "prompt.txt")
         with open(prompt_path, "r", encoding="utf-8") as f:
             prompt_template = f.read()
         print(f"OK: Prompt template loaded")
         
-        # Format full prompt
         full_prompt = rag.prompt.format(
             context=formatted_context,
             question=test_question,
@@ -107,6 +104,12 @@ def debug_rag_process():
         
         print(f"\n--- LLM RESPONSE ---")
         print(raw_response)
+        print("-" * 40)
+        
+        # Parse the LLM response
+        parsed_response = rag.str_parser.parse(raw_response)
+        print(f"\n--- PARSED LLM RESPONSE ---")
+        print(parsed_response)
         print("-" * 40)
         
     except Exception as e:

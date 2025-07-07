@@ -62,7 +62,7 @@ class Offline_RAG:
                 collection_name = "judgment_collection"
             
             retriever = VectorDB(collection_name=collection_name).get_retriever()
-            context = self.format_docs(retriever.invoke(question))
+            context = self.format_docs(retriever.invoke(question), source_type=source_type)
             
             formatted_inputs = {
                 "context": context,
@@ -77,18 +77,25 @@ class Offline_RAG:
         
         return dynamic_retrieval_chain
 
-    def format_docs(self, docs):
+    def format_docs(self, docs, source_type=None):
         sorted_docs = sorted(docs, key=self._get_sort_key)
         formatted_docs = []
-        
+
         for doc in sorted_docs:
             chunk_index = doc.metadata.get("chunk_index", "")
             section = doc.metadata.get("section", "")
+            source = doc.metadata.get("source", "")
+
+            if source_type == "judgment" and source:
+                header = f"[BẢN ÁN: {source}]"
+            elif section and chunk_index:
+                header = f"[{section} - {chunk_index}]"
+            else:
+                header = ""
             
-            header = f"[{section} - {chunk_index}]" if section and chunk_index else ""
             formatted_content = f"{header}\n{doc.page_content}" if header else doc.page_content
             formatted_docs.append(formatted_content)
-            
+
         return "\n\n".join(formatted_docs)
         
     def _get_sort_key(self, doc):
@@ -99,11 +106,9 @@ class Offline_RAG:
         try:
             parts = chunk_index.split('.')
             if len(parts) >= 3:
-                # Handle both L.{article}.{chunk} and J.{section}.{chunk} formats
                 if parts[0] in ['L', 'J']:
                     return (int(parts[1]), int(parts[2]))
             elif len(parts) >= 2:
-                # Handle {section}.{chunk} format
                 return (int(parts[0]), int(parts[1]))
             return (float('inf'), float('inf'))
         except (ValueError, IndexError):
