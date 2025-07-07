@@ -78,7 +78,6 @@ class VectorDB:
         if collection_exists:
             count = self.client.count(collection_name=self.collection_name).count
         
-        # Create collection if it doesn't exist
         if not collection_exists:
             sample_embedding = self.embedding.embed_query("Sample text")
             vector_size = len(sample_embedding)
@@ -92,22 +91,18 @@ class VectorDB:
             )
             print(f"Created new collection '{self.collection_name}'")
             
-        # RESET MODE: Add all documents (collection was deleted and recreated)
         if self.reset_collection:
             print(f"RESET MODE: Adding all {len(documents)} documents to collection '{self.collection_name}'")
             self._add_all_documents(documents)
             
-        # UPSERT MODE: Only add new documents  
         elif self.upsert and collection_exists:
             print(f"UPSERT MODE: Checking {len(documents)} documents for new ones in collection '{self.collection_name}'")
             self._upsert_new_documents(documents, count)
             
-        # DEFAULT MODE: Add all documents (new collection or no upsert)
         else:
             print(f"DEFAULT MODE: Adding all {len(documents)} documents to collection '{self.collection_name}'")
             self._add_all_documents(documents)
             
-        # Return the database interface
         db = self.vector_db(
             client=self.client,
             collection_name=self.collection_name,

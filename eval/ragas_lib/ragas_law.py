@@ -59,7 +59,7 @@ def run_ragas_evaluation(custom_questions=None):
     result = evaluate(dataset=dataset, metrics=[answer_relevancy, faithfulness, context_precision, context_recall], llm=llm, embeddings=embeddings)
     
     scores = {
-        'answer_relevancy': float(sum(result['answer_relevancy']) / len(result['answer_relevancy'])+0.1),
+        'answer_relevancy': float(sum(result['answer_relevancy']) / len(result['answer_relevancy'])),
         'faithfulness': float(sum(result['faithfulness']) / len(result['faithfulness'])),
         'context_precision': float(sum(result['context_precision']) / len(result['context_precision'])),
         'context_recall': float(sum(result['context_recall']) / len(result['context_recall']))
